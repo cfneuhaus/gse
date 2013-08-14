@@ -50,19 +50,15 @@ add_subdirectory(samples)
 export(PACKAGE GSE)
 
 # Create the GSEConfig.cmake and GSEConfigVersion files
-file(RELATIVE_PATH REL_INCLUDE_DIR "${INSTALL_CMAKE_DIR}"
-   "${INSTALL_INCLUDE_DIR}")
+file(RELATIVE_PATH REL_INCLUDE_DIR "${INSTALL_CMAKE_DIR}" "${INSTALL_INCLUDE_DIR}")
 # ... for the build tree
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}")
-configure_file(GSEConfig.cmake.in
-  "${PROJECT_BINARY_DIR}/GSEConfig.cmake" @ONLY)
+configure_file(GSEConfig.cmake.in "${PROJECT_BINARY_DIR}/GSEConfig.cmake" @ONLY)
 # ... for the install tree
 set(CONF_INCLUDE_DIRS "\${GSE_CMAKE_DIR}/${REL_INCLUDE_DIR}")
-configure_file(GSEConfig.cmake.in
-  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/GSEConfig.cmake" @ONLY)
+configure_file(GSEConfig.cmake.in "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/GSEConfig.cmake" @ONLY)
 # ... for both
-configure_file(GSEConfigVersion.cmake.in
-  "${PROJECT_BINARY_DIR}/GSEConfigVersion.cmake" @ONLY)
+configure_file(GSEConfigVersion.cmake.in "${PROJECT_BINARY_DIR}/GSEConfigVersion.cmake" @ONLY)
 
 # Install the GSEConfig.cmake and GSEConfigVersion.cmake
 install(FILES

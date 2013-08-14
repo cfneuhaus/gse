@@ -14,7 +14,7 @@ class ThreadPool;
 class ThreadPool
 {
 public:
-	ThreadPool(size_t threads)
+	ThreadPool(size_t threads=std::thread::hardware_concurrency())
 		:   stop(false)
 	{
 		numPushedTasks=0;

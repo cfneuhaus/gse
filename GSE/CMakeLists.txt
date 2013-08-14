@@ -12,7 +12,6 @@ set (HEADERS
 ./include/GSE/RecBayes.h
 ./include/GSE/LS.h
 ./include/GSE/GSEDefs.h
-./include/GSE/PoseManifold3DGPS.h
 ./include/GSE/DiracDistribution.h
 ./include/GSE/Distributions.h
 ./include/GSE/SqrtGaussian.h
