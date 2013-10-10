@@ -43,7 +43,7 @@ add_subdirectory(samples)
 # ===============================
 
 # Add all targets to the build-tree export set
-#export(TARGETS GSE FILE "${PROJECT_BINARY_DIR}/GSETargets.cmake")
+export(TARGETS FILE "${PROJECT_BINARY_DIR}/GSETargets.cmake")
 
 # Export the package for use from the build-tree
 # (this registers the build-tree with a global CMake-registry)

@@ -3,35 +3,34 @@ configure_file(config.h.in "${CMAKE_CURRENT_BINARY_DIR}/config.h" @ONLY)
 #add_library(GSE SHARED foo.c foo.h config.h.in)
 
 set (HEADERS
-./include/GSE/RecBayes/ParticleFilter.h
-./include/GSE/RecBayes/SqrtUKFManifold.h
-./include/GSE/RecBayes/ParticleDistribution.h
-./include/GSE/RecBayes/Unscented.h
-./include/GSE/RecBayes/UKF.h
-./include/GSE/Gaussian.h
-./include/GSE/RecBayes.h
-./include/GSE/LS.h
-./include/GSE/GSEDefs.h
-./include/GSE/DiracDistribution.h
-./include/GSE/Distributions.h
-./include/GSE/SqrtGaussian.h
-./include/GSE/PoseManifold2D.h
-./include/GSE/LS/ConstraintTraits.h
-./include/GSE/LS/GenericAbsConstraint.h
-./include/GSE/LS/WrappedConstraint.h
-./include/GSE/LS/NumDiff.h
-./include/GSE/LS/NonlinearEstimator.h
-./include/GSE/LS/LSProblem.h
-./include/GSE/LS/ConstraintRef.h
-./include/GSE/LS/RandomVariable.h
-./include/GSE/eigen.h
-./include/GSE/ManifoldUtil.h
-./include/GSE/ThreadPool.h
-./include/GSE/PoseManifold3D.h
+./RecBayes/ParticleFilter.h
+./RecBayes/SqrtUKFManifold.h
+./RecBayes/ParticleDistribution.h
+./RecBayes/Unscented.h
+./RecBayes/UKF.h
+./Gaussian.h
+./RecBayes.h
+./LS.h
+./GSEDefs.h
+./DiracDistribution.h
+./Distributions.h
+./SqrtGaussian.h
+./PoseManifold2D.h
+./LS/ConstraintTraits.h
+./LS/GenericAbsConstraint.h
+./LS/WrappedConstraint.h
+./LS/NumDiff.h
+./LS/NonlinearEstimator.h
+./LS/LSProblem.h
+./LS/ConstraintRef.h
+./LS/RandomVariable.h
+./eigen.h
+./ManifoldUtil.h
+./ThreadPool.h
+./PoseManifold3D.h
 )
 
 ADD_DEFINITIONS(-DGSE_NO_CHOLMOD)
-
 
 #set_target_properties(GSE PROPERTIES PUBLIC_HEADER "${HEADERS};${CMAKE_CURRENT_BINARY_DIR}/config.h")
 
