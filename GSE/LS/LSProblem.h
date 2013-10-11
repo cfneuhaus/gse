@@ -1,6 +1,8 @@
 #ifndef GSE_LS_LSPROBLEM_H
 #define GSE_LS_LSPROBLEM_H
 
+#define FUSION_MAX_SET_SIZE 20
+#define FUSION_MAX_VECTOR_SIZE 20
 #include "../GSEDefs.h"
 #include "../ManifoldUtil.h"
 #include "ConstraintTraits.h"
