@@ -3,6 +3,7 @@
 
 #define FUSION_MAX_SET_SIZE 20
 #define FUSION_MAX_VECTOR_SIZE 20
+
 #include "../GSEDefs.h"
 #include "../ManifoldUtil.h"
 #include "ConstraintTraits.h"
@@ -129,13 +130,14 @@ class LSProblem
 #else
 template<typename A1=boost::fusion::void_,typename A2=boost::fusion::void_,typename A3=boost::fusion::void_,typename A4=boost::fusion::void_,
 		 typename A5=boost::fusion::void_,typename A6=boost::fusion::void_,typename A7=boost::fusion::void_,typename A8=boost::fusion::void_,
-		 typename A9=boost::fusion::void_,typename A10=boost::fusion::void_,typename A11=boost::fusion::void_,typename A12=boost::fusion::void_>
+		 typename A9=boost::fusion::void_,typename A10=boost::fusion::void_,typename A11=boost::fusion::void_,typename A12=boost::fusion::void_,
+                 typename A13=boost::fusion::void_,typename A14=boost::fusion::void_,typename A15=boost::fusion::void_>
 class LSProblem
 {
-	typedef LSProblem<A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,A11,A12> ThisType;
+	typedef LSProblem<A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,A11,A12,A13,A14,A15> ThisType;
 	//typedef typename boost::fusion::set<A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,A11,A12> ArgSet;
 	typedef typename boost::fusion::result_of::join<
-	boost::fusion::set<A1,A2,A3,A4,A5,A6,A7,A8,A9,A10>,boost::fusion::set<A11,A12> >::type ArgSet;
+	boost::fusion::set<A1,A2,A3,A4,A5,A6,A7,A8,A9,A10>,boost::fusion::set<A11,A12,A13,A14,A15> >::type ArgSet;
 #endif
 
 	// Filter those types which are Manifolds
