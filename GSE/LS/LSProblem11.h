@@ -1,7 +1,3 @@
-#if __cplusplus==201103L
-#include "LSProblem11.h"
-#else
-
 #ifndef GSE_LS_LSPROBLEM_H
 #define GSE_LS_LSPROBLEM_H
 
@@ -1564,5 +1560,4 @@ public:
 GSE_NS_END
 
 
-#endif
 #endif
