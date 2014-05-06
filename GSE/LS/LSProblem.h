@@ -5,8 +5,6 @@
 #ifndef GSE_LS_LSPROBLEM_H
 #define GSE_LS_LSPROBLEM_H
 
-#define GSE_CPP14
-
 #define FUSION_MAX_SET_SIZE 20
 #define FUSION_MAX_VECTOR_SIZE 20
 
@@ -65,68 +63,11 @@ GSE_NS_BEGIN
 
 using namespace Eigen;
 
-//template <typename... Elems>
-//struct RVHook;
-
-//template <>
-//struct RVHook<boost::fusion::set<> >
-//{
-//};
-
-//template <typename Head, typename... Tail>
-//struct RVHook<boost::fusion::set<Head, Tail...> > : public RVHook<boost::fusion::set<Tail...> >
-//{
-//	virtual void rvAdded(const Head& rv);
-//};
-
-//template <typename... Elems>
-//struct ConstraintHook;
-
-//template <>
-//struct ConstraintHook<boost::fusion::set<> > {
-//};
-
-//template <typename Head, typename... Tail>
-//struct ConstraintHook<boost::fusion::set<Head, Tail...> > : public ConstraintHook<boost::fusion::set<Tail...> >
-//{
-//	virtual void constraintAdded(const Head& h);
-//};
-
-//template<typename RVSet, typename ConstraintSet>
-//struct ProblemHook : public RVHook<RVSet>, public ConstraintHook<ConstraintSet>
-//{
-//};
-
-
-
 struct Offsets
 {
 	int stateOffs;
 	int deltaOffs;
 };
-
-template <int first, int last, class Functor>
-void for_range(Functor f)
-{
-	boost::fusion::for_each(typename boost::mpl::range_c<int,first,last>::type(),f);
-}
-
-
-#if 1 // Workaround for gcc bug
-
-// template <typename... Elems>
-// struct VarArgsToSet;
-
-// template <>
-// struct VarArgsToSet<> {
-// 	typedef boost::fusion::set<> type;
-// }; // empty tuple
-
-// template <typename Head, typename... Tail>
-// struct VarArgsToSet<Head, Tail...> {
-// 	typedef typename boost::fusion::result_of::push_back<typename VarArgsToSet<Tail...>::type,Head>::type type;
-// };
-
 
 template<typename... Args>
 class LSProblem
@@ -134,20 +75,7 @@ class LSProblem
 	typedef LSProblem<Args...> ThisType;
 
 	// Convert Var Arg list to a set. The VarArgsToSet struct is only needed because gcc currently does not allow Passing Args... to make_set
-	// typedef typename boost::fusion::result_of::as_set<typename VarArgsToSet<Args...>::type>::type ArgSet;
 	typedef boost::fusion::set<Args...> ArgSet;
-#else
-template<typename A1=boost::fusion::void_,typename A2=boost::fusion::void_,typename A3=boost::fusion::void_,typename A4=boost::fusion::void_,
-		 typename A5=boost::fusion::void_,typename A6=boost::fusion::void_,typename A7=boost::fusion::void_,typename A8=boost::fusion::void_,
-		 typename A9=boost::fusion::void_,typename A10=boost::fusion::void_,typename A11=boost::fusion::void_,typename A12=boost::fusion::void_,
-                 typename A13=boost::fusion::void_,typename A14=boost::fusion::void_,typename A15=boost::fusion::void_>
-class LSProblem
-{
-	typedef LSProblem<A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,A11,A12,A13,A14,A15> ThisType;
-	//typedef typename boost::fusion::set<A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,A11,A12> ArgSet;
-	typedef typename boost::fusion::result_of::join<
-	boost::fusion::set<A1,A2,A3,A4,A5,A6,A7,A8,A9,A10>,boost::fusion::set<A11,A12,A13,A14,A15> >::type ArgSet;
-#endif
 
 	// Filter those types which are Manifolds
 	typedef typename boost::fusion::result_of::as_set<
@@ -228,12 +156,6 @@ class LSProblem
 	int maxOffset;
 	int maxDeltaOffset;
 //////
-public:
-	//typedef ProblemHook<RVTypes,ConstraintTypes> HookType;
-
-
-
-
 public:
 	LSProblem() : rvidCounter{0}
 	{
@@ -413,31 +335,6 @@ public:
 	}
 	//-------------------------------------------------------------------------
 	//-------------------------------------------------------------------------
-private:
-#ifndef GSE_CPP14
-	struct IndexAssigner
-	{
-		IndexAssigner(ThisType* pthis_) : pthis(pthis_), offs1(0), offs2(0) {}
-		template<typename RVType> void operator()(const std::vector<RVType>& vec) const
-		{
-			boost::fusion::at_key<RVType>(pthis->offsets)=Offsets{offs1,offs2};
-
-			constexpr int Dim=RVType::ManifoldType::Dim;
-			constexpr int DeltaDim=RVType::ManifoldType::DeltaDim;
-
-			std::unordered_map<RVType,Offsets>& actualRvToIndex=boost::fusion::at_key<RVType>(pthis->rvToIndex);
-			for (int i=0;i<(int)vec.size();i++)
-				actualRvToIndex[vec[i]]=Offsets{offs1+i*Dim,offs2+i*DeltaDim};
-
-			offs1+=vec.size()*Dim;
-			offs2+=vec.size()*DeltaDim;
-		}
-		ThisType* pthis;
-		mutable int offs1;
-		mutable int offs2;
-	};
-#endif
-public:
 	template<typename T>
 	RandomVariable<T> addRandomVariable()
 	{
@@ -459,12 +356,6 @@ public:
 		cm.insert({t,RVType::ManifoldType::DeltaMat::Identity()});
 
 		// index update -- inefficient right now
-#ifndef GSE_CPP14
-		IndexAssigner ia{this};
-		boost::fusion::for_each(rvs,ia);
-		maxOffset=ia.offs1;
-		maxDeltaOffset=ia.offs2;
-#else
 		maxOffset=0;
 		maxDeltaOffset=0;
 		boost::fusion::for_each(rvs,[&]<typename RVType>(const std::vector<RVType>& vec)
@@ -483,50 +374,10 @@ public:
 
 		});
 
-#endif
-
 		return t;
 	}
 	//-------------------------------------------------------------------------
 	//-------------------------------------------------------------------------
-private:
-#ifndef GSE_CPP14
-	template<typename T>
-	struct ContainsRV
-	{
-		ContainsRV(RandomVariable<T> rv_) : rv(rv_),val(false) {}
-		template<typename RVType> void operator()(const RVType& rv2) const
-		{
-			if (rv2.getId()==rv.getId())
-				val=true;
-		}
-		RandomVariable<T> rv;
-		mutable bool val;
-	};
-	template<typename T>
-	struct RemoveConstraintsUsingRV
-	{
-		template<typename ConstraintType> void operator()(const std::vector<ConstraintType>& constrsc) const
-		{
-			// evil const cast
-			std::vector<ConstraintType>& constrs=(std::vector<ConstraintType>&)constrsc;
-			for (auto it=constrs.begin();it!=constrs.end();)
-			{
-				ContainsRV<T> crv{rv};
-				boost::fusion::for_each(it->getParams(),crv);
-				if (crv.val)
-				{
-					it=constrs.erase(it);
-					//std::cout << "Removing Constraint!" << typeid(*it).name() << std::endl;
-					continue;
-				}
-				++it;
-			}
-		}
-		RandomVariable<T> rv;
-	};
-#endif
-public:
 	template<typename T>
 	void removeRandomVariable(RandomVariable<T> rv)
 	{
@@ -542,9 +393,6 @@ public:
 		rvList.erase(it);
 
 		// now find all constraints which depend on this rv and delete those as well
-#ifndef GSE_CPP14
-		boost::fusion::for_each(constraints,RemoveConstraintsUsingRV<T>{rv});
-#else
 		boost::fusion::for_each(constraints,[&]<typename ConstraintType>(const std::vector<ConstraintType>& constrsc)
 		{
 			// evil const cast
@@ -566,7 +414,6 @@ public:
 				++it;
 			}
 		});
-#endif
 
 		// remove initial guess
 		typedef std::unordered_map<RVType,typename RVType::ManifoldType::Vec> MapType;
@@ -574,12 +421,6 @@ public:
 		m.erase(m.find(rv));
 
 		// index update -- inefficient right now
-#ifndef GSE_CPP14
-		IndexAssigner ia{this};
-		boost::fusion::for_each(rvs,ia);
-		maxOffset=ia.offs1;
-		maxDeltaOffset=ia.offs2;
-#else
 		maxOffset=0;
 		maxDeltaOffset=0;
 		boost::fusion::for_each(rvs,[&]<typename RVType>(const std::vector<RVType>& vec)
@@ -598,33 +439,12 @@ public:
 
 		});
 
-#endif
 	}
 	//-------------------------------------------------------------------------
 	//-------------------------------------------------------------------------
-private:
-#ifndef GSE_CPP14
-	struct InitialGuessExtractor
-	{
-		template<typename RVType> void operator()(const std::vector<RVType>& vec) const
-		{
-			//auto& actualPem=boost::fusion::at_key<T>();
-			constexpr int Dim=RVType::ManifoldType::Dim;
-			const int offs1=boost::fusion::at_key<RVType>(pthis->offsets).stateOffs;
-			for (int i=0;i<(int)vec.size();i++)
-				x.segment<Dim>(offs1+i*Dim)=pthis->state(vec[i]);
-		}
-		const ThisType* pthis;
-		VectorXd& x;
-	};
-#endif
-public:
 	VectorXd getInitialGuess() const
 	{
 		VectorXd ret{getStateSize()};
-#ifndef GSE_CPP14
-		boost::fusion::for_each(rvs,InitialGuessExtractor{this,ret});
-#else
 		boost::fusion::for_each(rvs,[&]<typename RVType>(const std::vector<RVType>& vec)
 		{
 			//auto& actualPem=boost::fusion::at_key<T>();
@@ -633,35 +453,12 @@ public:
 			for (int i=0;i<(int)vec.size();i++)
 				ret.segment<Dim>(offs1+i*Dim)=this->state(vec[i]);
 		});
-#endif
 		return ret;
 	}
 	//-------------------------------------------------------------------------
 	//-------------------------------------------------------------------------
-private:
-#ifndef GSE_CPP14
-	struct DeltaAdder
-	{
-		template<typename RVType> void operator()(const std::vector<RVType>& vec) const
-		{
-			constexpr int Dim=RVType::ManifoldType::Dim;
-			constexpr int DeltaDim=RVType::ManifoldType::DeltaDim;
-			const int offs1=boost::fusion::at_key<RVType>(pthis->offsets).stateOffs;
-			const int offs2=boost::fusion::at_key<RVType>(pthis->offsets).deltaOffs;
-			for (int i=0;i<(int)vec.size();i++)
-				x.segment<Dim>(offs1+i*Dim)=RVType::ManifoldType::manifoldAdd(x.segment<Dim>(offs1+i*Dim),delta.segment<DeltaDim>(offs2+i*DeltaDim));
-		}
-		const ThisType* pthis;
-		VectorXd& x;
-		const VectorXd& delta;
-	};
-#endif
-public:
 	void addDelta(VectorXd& x, const VectorXd& delta) const
 	{
-#ifndef GSE_CPP14
-		boost::fusion::for_each(rvs,DeltaAdder{this,x,delta});
-#else
 		boost::fusion::for_each(rvs,[&]<typename RVType>(const std::vector<RVType>& vec)
 		{
 			constexpr int Dim=RVType::ManifoldType::Dim;
@@ -671,139 +468,16 @@ public:
 			for (int i=0;i<(int)vec.size();i++)
 				x.segment<Dim>(offs1+i*Dim)=RVType::ManifoldType::manifoldAdd(x.segment<Dim>(offs1+i*Dim),delta.segment<DeltaDim>(offs2+i*DeltaDim));
 		});
-#endif
 	}
 	//-------------------------------------------------------------------------
 	//-------------------------------------------------------------------------
 private:
-#ifndef GSE_CPP14
-	struct GetRVStateFromVector
-	{
-		//GetRVStateFromVector(ThisType* pthis_,const VectorXd& x_) : pthis(pthis_), x(x_) {}
-
-		template <class T> struct result;
-		template <class T> struct result<GetRVStateFromVector(const T&)>
-		{
-			typedef typename T::ManifoldType::Vec type;
-		};
-
-		template<typename T>
-		typename ManifoldTraits<T>::Manifold::Vec operator()(RandomVariable<T> rv) const
-		{
-			int offs=pthis->getRVOffset(rv);
-			constexpr int Dim=ManifoldTraits<T>::Manifold::Dim;
-			return x.segment<Dim>(offs);
-		}
-
-		ThisType* pthis;
-		const VectorXd& x;
-	};
-	template<typename CType, int Dim1>
-	struct ForAllJacobians2
-	{
-		typedef ConstraintTraits<CType> CTraits;
-		template<typename T> void operator()(T a) const
-		{
-			(void)a;
-			//std::cout << "Iterating" << Dim1 << " " << T::value << std::endl;
-			constexpr int Dim2=T::value;
-
-			typedef typename boost::fusion::result_of::value_at_c<typename CTraits::ParamJacType,Dim1>::type JacA;
-			typedef typename boost::fusion::result_of::value_at_c<typename CTraits::ParamJacType,Dim2>::type JacB;
-
-			Matrix<double,JacA::ColsAtCompileTime,JacB::ColsAtCompileTime> jtj=boost::fusion::at_c<Dim1>(jac).transpose()*boost::fusion::at_c<Dim2>(jac);
-
-			const int aOffset=pthis->getRVDeltaOffset(boost::fusion::at_c<Dim1>(params));
-			const int bOffset=pthis->getRVDeltaOffset(boost::fusion::at_c<Dim2>(params));
-
-			for (int i=0;i<JacA::ColsAtCompileTime;i++)
-				for (int j=0;j<JacB::ColsAtCompileTime;j++)
-					sys.JTJ.coeffRef(aOffset+i,bOffset+j)+=jtj(i,j);
-		}
-		ThisType* pthis;
-		const typename CTraits::ParamType& params;
-		typename CTraits::ParamJacType& jac;
-		LinearSystem& sys;
-	};
-	template<typename CType>
-	struct ForAllJacobians
-	{
-		typedef ConstraintTraits<CType> CTraits;
-		template<typename T> void operator()(T a) const
-		{
-			(void)a;
-			constexpr int Dim1=T::value;
-			//std::cout << "Iterating" << T::value << std::endl;
-			for_range<0,CTraits::NumParams>(ForAllJacobians2<CType,Dim1>{pthis,params,jac,sys});
-
-			const int aRv=pthis->getRVDeltaOffset(boost::fusion::at_c<Dim1>(params));
-			typedef typename boost::fusion::result_of::value_at_c<typename CTraits::ParamJacType,Dim1>::type JacA;
-
-			sys.mJTz.segment<JacA::ColsAtCompileTime>(aRv)+=-boost::fusion::at_c<Dim1>(jac).transpose()*residual;
-
-		}
-		ThisType* pthis;
-		const typename CTraits::ParamType& params;
-		typename CTraits::RetType& residual;
-		typename CTraits::ParamJacType& jac;
-		LinearSystem& sys;
-	};
-	struct MakePointer
-	{
-		template <class T> struct result;
-		template <class T> struct result<MakePointer(const T&)>
-		{
-			typedef T* type;
-		};
-
-		template<typename T>
-		T* operator()(const T& t) const
-		{
-			return (T*)&t;
-		}
-	};
-	struct UpdateSystem
-	{
-		template<typename CType> void operator()(const std::vector<CType>& constraints) const
-		{
-			//       Meas
-			//    ----------------
-			// Rvs|
-			//    |
-			//    |
-			typedef ConstraintTraits<CType> CTraits;
-			for (const CType& constraint : constraints)
-			{
-				// for every parameter: read the current value from the current state x
-				typename CTraits::ParamVecType params=boost::fusion::transform(constraint.getParams(),GetRVStateFromVector{pthis,x});
-				typename CTraits::ParamJacType jac;
-#if 0
-				typename CTraits::RetType residual;
-				//it->error(params,residual,&jac);
-#else
-				//typedef typename boost::mpl::transform<typename CTraits::ParamJacType,MakePointer1<boost::mpl::_1> >::type JacPtrs;
-				auto jacptr=boost::fusion::transform(jac,MakePointer{});
-
-				auto fnParams=boost::fusion::push_front(boost::fusion::join(params,jacptr),&constraint);
-				typename CTraits::RetType residual=boost::fusion::invoke(&CType::error,fnParams);
-#endif
-				for_range<0,CTraits::NumParams>(ForAllJacobians<CType>{pthis,constraint.getParams(),residual,jac,sys});
-			}
-		}
-		ThisType* pthis;
-		const VectorXd& x;
-		LinearSystem& sys;
-	};
-#endif
-private:
-#ifdef GSE_CPP14
 	template<typename CType>
 	void addConstraintToSystem(const Eigen::VectorXd& x, const CType& constraint, LinearSystem& sys)
 	{
 		typedef ConstraintTraits<CType> CTraits;
 
 		// for every parameter: read the current value from the current state x
-		//typename CTraits::ParamVecType actualParams=boost::fusion::transform(constraint.getParams(),GetRVStateFromVector{this,x});
 		typename CTraits::ParamVecType actualParams=boost::fusion::transform(constraint.getParams(),[&]<typename T>(RandomVariable<T> rv) //-> typename ManifoldTraits<T>::Manifold::Vec
 		{
 			int offs=this->getRVOffset(rv);
@@ -815,7 +489,6 @@ private:
 
 		typename CTraits::ParamJacType jac;
 
-		//auto jacptr=boost::fusion::transform(jac,MakePointer{});
 		auto jacptr=boost::fusion::transform(jac,[]<typename T>(T& t)
 		{
 			return (typename std::remove_const<T>::type*)&t;
@@ -825,7 +498,6 @@ private:
 		auto fnParams=boost::fusion::push_front(boost::fusion::join(actualParams,jacptr),&constraint);
 		typename CTraits::RetType residual=boost::fusion::invoke(&CType::error,fnParams);
 
-		//for_range<0,CTraits::NumParams>(ForAllJacobians<CType>{this,constraint.getParams(),residual,jac,sys});
 		boost::mpl::for_each<boost::mpl::range_c<int,0,CTraits::NumParams> >([&]<typename Index1>(Index1 a)
 		{
 			(void)a;
@@ -861,7 +533,6 @@ private:
 
 		});
 	}
-#endif
 public:
 	void updateSystem(const VectorXd& x, LinearSystem& sys)
 	{
@@ -877,9 +548,6 @@ public:
 				it.valueRef()=0;
 			}
 		}
-#ifndef GSE_CPP14
-		boost::fusion::for_each(getConstraints(),UpdateSystem{this,x,sys});
-#else
 		boost::fusion::for_each(getConstraints(),[&]<typename CType>(const std::vector<CType>& constraints)
 		{
 			//       Meas
@@ -892,7 +560,6 @@ public:
 				this->addConstraintToSystem(x, constraint,sys);
 			}
 		});
-#endif
 
 		//for (int i=0;i<6;i++)
 		//sys.JTJ.coeffRef(i,i)+=1;
@@ -901,50 +568,6 @@ public:
 		//sys.JTJ.coeffRef(2,2)+=1;
 		//std::cout << sys.JTJ << std::endl;
 	}
-private:
-#ifndef GSE_CPP14
-	struct UpdateSystemPar
-	{
-		template<typename CType> void operator()(const std::vector<CType>& constraints) const
-		{
-			//       Meas
-			//    ----------------
-			// Rvs|
-			//    |
-			//    |
-			typedef ConstraintTraits<CType> CTraits;
-			int task=0;
-			for (const CType& constraint : constraints)
-			{
-				int th=task%numThreads;
-				pools[th]->pushTask([this,th,&constraint]()
-				{
-					// for every parameter: read the current value from the current state x
-					typename CTraits::ParamVecType params=boost::fusion::transform(constraint.getParams(),GetRVStateFromVector{pthis,x});
-					typename CTraits::ParamJacType jac;
-#if 0
-					typename CTraits::RetType residual;
-					//it->error(params,residual,&jac);
-#else
-					//typedef typename boost::mpl::transform<typename CTraits::ParamJacType,MakePointer1<boost::mpl::_1> >::type JacPtrs;
-					auto jacptr=boost::fusion::transform(jac,MakePointer{});
-
-					auto fnParams=boost::fusion::push_front(boost::fusion::join(params,jacptr),&constraint);
-					typename CTraits::RetType residual=boost::fusion::invoke(&CType::error,fnParams);
-#endif
-					for_range<0,CTraits::NumParams>(ForAllJacobians<CType>{pthis,constraint.getParams(),residual,jac,systems[th]});
-				});
-				task++;
-			}
-		}
-		ThisType* pthis;
-		const VectorXd& x;
-		LinearSystem* systems;
-		ThreadPool** pools;
-		int numThreads;
-	};
-#endif
-public:
 	void updateSystem_par(const VectorXd& x, LinearSystem& sys)
 	{
 		sys.mJTz=VectorXd::Zero(getDeltaSize());
@@ -967,11 +590,7 @@ public:
 			pools[i]=new ThreadPool(1);
 			systems[i]=sys;
 		}
-#ifndef GSE_CPP14
-		// Dont put updater in the same line - it must not be a temporary due to the involved threads
-		UpdateSystemPar updater{this,x,&systems[0],&pools[0],numThreads};
-		boost::fusion::for_each(getConstraints(),updater);
-#else
+
 		int task=0;
 		boost::fusion::for_each(getConstraints(),[&]<typename CType>(const std::vector<CType>& constraints)
 		{
@@ -991,7 +610,6 @@ public:
 				task++;
 			}
 		});
-#endif
 
 		for (int i=0;i<numThreads;i++)
 		{
@@ -1001,51 +619,10 @@ public:
 			sys.mJTz+=systems[i].mJTz;
 		}
 	}
-#ifndef GSE_CPP14
-	struct UpdateSystemSC
-	{
-		template<typename CType> void operator()(const std::vector<CType>& constraints) const
-		{
-			//       Meas
-			//    ----------------
-			// Rvs|
-			//    |
-			//    |
-			typedef ConstraintTraits<CType> CTraits;
-			//for (int i=0;i<(int)constraints.size();i++)
-			if (constraints.empty())
-				return;
-			int i=rand()%constraints.size();
-			{
-				const CType& constraint=constraints[i];
-				// for every parameter: read the current value from the current state x
-				typename CTraits::ParamVecType params=boost::fusion::transform(constraint.getParams(),GetRVStateFromVector{pthis,x});
-				typename CTraits::ParamJacType jac;
-#if 0
-				typename CTraits::RetType residual;
-				//it->error(params,residual,&jac);
-#else
-				//typedef typename boost::mpl::transform<typename CTraits::ParamJacType,MakePointer1<boost::mpl::_1> >::type JacPtrs;
-				auto jacptr=boost::fusion::transform(jac,MakePointer());
-
-				auto fnParams=boost::fusion::push_front(boost::fusion::join(params,jacptr),&constraint);
-				typename CTraits::RetType residual=boost::fusion::invoke(&CType::error,fnParams);
-#endif
-				for_range<0,CTraits::NumParams>(ForAllJacobians<CType>{pthis,constraint.getParams(),residual,jac,sys});
-			}
-		}
-		ThisType* pthis;
-		const VectorXd& x;
-		LinearSystem& sys;
-	};
-#endif
 	void updateSystemSingleConstraint(const VectorXd& x, LinearSystem& sys)
 	{
 		sys.mJTz=VectorXd::Zero(getDeltaSize());
 
-#ifndef GSE_CPP14
-		boost::fusion::for_each(getConstraints(),UpdateSystemSC{this,x,sys});
-#else
 		boost::fusion::for_each(getConstraints(),[&]<typename CType>(const std::vector<CType>& constraints)
 		{
 			//       Meas
@@ -1062,8 +639,6 @@ public:
 				this->addConstraintToSystem(x, constraint,sys);
 			}
 		});
-#endif
-
 	}
 	void updateDenseSystem(const VectorXd& x, LinearSystem& sys)
 	{
@@ -1073,77 +648,15 @@ public:
 	}
 	//-----------------------------------------------------------------------------
 	//-----------------------------------------------------------------------------
-private:
-#ifndef GSE_CPP14
-	struct MakeNullPointer
-	{
-		template <class T> struct result;
-		template <class T> struct result<MakeNullPointer(const T&)>
-		{
-			typedef T* type;
-		};
-
-		template<typename T>
-		T* operator()(const T& t) const
-		{
-			(void)t;
-			return nullptr;
-		}
-	};
-	struct ComputeError
-	{
-		ComputeError(ThisType* pthis_, const VectorXd& x_, VectorXd& err_) : pthis(pthis_), x(x_), err(err_), measOffs(0) {}
-		template<typename CType> void operator()(const std::vector<CType>& constraints) const
-		{
-			for (const CType& constraint : constraints)
-			{
-				typedef ConstraintTraits<CType> CTraits;
-				typename CTraits::ParamVecType params=boost::fusion::transform(constraint.getParams(),GetRVStateFromVector{pthis,x});
-#if 0
-				typename CTraits::RetType residual;
-				it->error(params,residual,nullptr);
-#else
-				typename CTraits::ParamJacType jac;
-				auto jacptr=boost::fusion::transform(jac,MakeNullPointer{});
-
-				//boost::mpl::print<decltype(jacptr)> dsdsads;
-				auto fnParams=boost::fusion::push_front(boost::fusion::join(params,jacptr),&constraint);
-				//boost::mpl::print<decltype(fnParams)> asdiohsadisaod;
-				typename CTraits::RetType residual=boost::fusion::invoke(&CType::error,fnParams);
-#endif
-
-				constexpr int DeltaDim=ManifoldTraits<typename CTraits::RetType>::Manifold::DeltaDim;
-
-				err.segment<DeltaDim>(measOffs)=residual;
-				measOffs+=DeltaDim;
-			}
-
-		}
-		ThisType* pthis;
-		const VectorXd& x;
-		VectorXd& err;
-		mutable int measOffs;
-	};
-#endif
-public:
 	VectorXd computeError(const VectorXd& x)
 	{
-#ifndef GSE_CPP14
-		MeasDim md;
-		boost::fusion::for_each(getConstraints(),md);
-		const int measurementDim=md.measDim;
-#else
 		int measurementDim=0;
 		boost::fusion::for_each(getConstraints(),[&]<typename T>(const std::vector<T>& vec)
 		{
 			measurementDim+=vec.size()*ConstraintTraits<T>::RetType::RowsAtCompileTime;
 		});
-#endif
 
 		VectorXd err(measurementDim);
-#ifndef GSE_CPP14
-		boost::fusion::for_each(getConstraints(),ComputeError{this,x,err});
-#else
 		int measOffs=0;
 		boost::fusion::for_each(getConstraints(),[&]<typename CType>(const std::vector<CType>& constraints)
 		{
@@ -1177,76 +690,19 @@ public:
 			}
 
 		});
-#endif
 		return err;
 	}
 	//-----------------------------------------------------------------------------
 	//-----------------------------------------------------------------------------
-private:
-#ifndef GSE_CPP14
-	struct MeasDim
-	{
-		MeasDim() : measDim(0) {}
-		template<typename T> void operator()(const std::vector<T>& vec) const
-		{
-			measDim+=vec.size()*ConstraintTraits<T>::RetType::RowsAtCompileTime;
-		}
-		mutable int measDim;
-	};
-	struct InsertOnesInner
-	{
-		template<typename T> void operator()(RandomVariable<T> paramRv) const
-		{
-			const int rvOffsFrom=pthis->getRVDeltaOffset(paramRv);
-
-			for (int j=0;j<measDim;j++)
-				for (int i=0;i<RandomVariable<T>::ManifoldType::DeltaDim;i++)
-					//triplets.push_back(Eigen::Triplet<double>{rvOffsFrom+i,measOffset+j,1});
-					triplets.push_back({(rvOffsFrom+i),(measOffset+j),1});
-		}
-		ThisType* pthis;
-		std::vector<Eigen::Triplet<double> >& triplets;
-		mutable int measOffset;
-		mutable int measDim;
-	};
-	struct InsertOnes
-	{
-		InsertOnes(ThisType* pthis_, std::vector<Eigen::Triplet<double> >& triplets_) : pthis(pthis_), triplets(triplets_), measOffset(0) {}
-		template<typename CType> void operator()(const std::vector<CType>& constraints) const
-		{
-			typedef ConstraintTraits<CType> CTraits;
-			constexpr int DeltaDim=CTraits::RetType::RowsAtCompileTime;
-			for (const CType& constraint : constraints)
-			{
-				// loop over all params of this measurement
-				boost::fusion::for_each(constraint.getParams(),InsertOnesInner{pthis,triplets, measOffset, DeltaDim});
-
-				measOffset+=DeltaDim;
-			}
-		}
-		ThisType* pthis;
-		std::vector<Eigen::Triplet<double> >& triplets;
-		mutable int measOffset;
-	};
-#endif
 	void generateNonZeroPattern(LinearSystem& sys)
 	{
-#ifndef GSE_CPP14
-		MeasDim md;
-		boost::fusion::for_each(getConstraints(),md);
-		const int measurementDim=md.measDim;
-#else
 		int measurementDim=0;
 		boost::fusion::for_each(getConstraints(),[&]<typename T>(const std::vector<T>& vec)
 		{
 			measurementDim+=vec.size()*ConstraintTraits<T>::RetType::RowsAtCompileTime;
 		});
-#endif
 
 		std::vector<Eigen::Triplet<double> > triplets;
-#ifndef GSE_CPP14
-		boost::fusion::for_each(getConstraints(),InsertOnes{this,triplets});
-#else
 		int measOffset=0;
 		boost::fusion::for_each(getConstraints(),[&]<typename CType>(const std::vector<CType>& constraints)
 		{
@@ -1269,7 +725,6 @@ private:
 				measOffset+=DeltaDim;
 			}
 		});
-#endif
 
 		Eigen::SparseMatrix<double> HT{getDeltaSize(),measurementDim};
 		HT.setFromTriplets(triplets.begin(),triplets.end());
@@ -1280,31 +735,8 @@ private:
 		//std::cout << HT << std::endl;
 	}
 	//-------------------------------------------------------------------------
-#ifndef GSE_CPP14
-	struct Finisher
-	{
-		template<typename RVType> void operator()(const std::vector<RVType>& vec) const
-		{
-			constexpr int Dim=RVType::ManifoldType::Dim;
-			constexpr int DeltaDim=RVType::ManifoldType::DeltaDim;
-			int offs1=boost::fusion::at_key<RVType>(pthis->offsets).stateOffs;
-			int offs2=boost::fusion::at_key<RVType>(pthis->offsets).deltaOffs;
-			for (int i=0;i<(int)vec.size();i++)
-			{
-				pthis->state(vec[i])=x.segment<Dim>(offs1);
-				offs1+=Dim;
-				offs2+=DeltaDim;
-			}
-		}
-		ThisType* pthis;
-		const VectorXd& x;
-	};
-#endif
 	void finish(const VectorXd& x, /*const*/ Eigen::SparseMatrix<double>& cov)
 	{
-#ifndef GSE_CPP14
-		boost::fusion::for_each(rvs,Finisher{this,x});
-#else
 		boost::fusion::for_each(rvs,[&]<typename RVType>(const std::vector<RVType>& vec)
 		{
 			constexpr int Dim=RVType::ManifoldType::Dim;
@@ -1318,14 +750,10 @@ private:
 				offs2+=DeltaDim;
 			}
 		});
-#endif
 		(void)cov; // todo: use cov
 	}
 	void finishDense(const VectorXd& x, /*const*/ MatrixXd& cov)
 	{
-#ifndef GSE_CPP14
-		boost::fusion::for_each(rvs,Finisher{this,x});
-#else
 		boost::fusion::for_each(rvs,[&]<typename RVType>(const std::vector<RVType>& vec)
 		{
 			constexpr int Dim=RVType::ManifoldType::Dim;
@@ -1339,32 +767,11 @@ private:
 				offs2+=DeltaDim;
 			}
 		});
-#endif
 		(void)cov; // todo: use cov
 	}
 	//-------------------------------------------------------------------------
-#ifndef GSE_CPP14
-	struct CovFinisher
-	{
-		template<typename RVType> void operator()(const std::vector<RVType>& vec) const
-		{
-			constexpr int DeltaDim=RVType::ManifoldType::DeltaDim;
-			int offs2=boost::fusion::at_key<RVType>(pthis->offsets).deltaOffs;
-			for (int i=0;i<(int)vec.size();i++)
-			{
-				pthis->cov(vec[i])=cov.block<DeltaDim,DeltaDim>(offs2,offs2);
-				offs2+=DeltaDim;
-			}
-		}
-		ThisType* pthis;
-		const MatrixXd& cov;
-	};
-#endif
 	void finishCov(const Eigen::MatrixXd& cov)
 	{
-#ifndef GSE_CPP14
-		boost::fusion::for_each(rvs,CovFinisher{this,cov});
-#else
 		boost::fusion::for_each(rvs,[&]<typename RVType>(const std::vector<RVType>& vec)
 		{
 			constexpr int DeltaDim=RVType::ManifoldType::DeltaDim;
@@ -1375,7 +782,6 @@ private:
 				offs2+=DeltaDim;
 			}
 		});
-#endif
 		(void)cov; // todo: use cov
 	}
 
@@ -1383,31 +789,14 @@ private:
 	//-------------------------------------------------------------------------
 	//-------------------------------------------------------------------------
 	//-------------------------------------------------------------------------
-#ifndef GSE_CPP14
-	template<typename F>
-	struct RVIterator
-	{
-		template<typename RVType> void operator()(const std::vector<RVType>& vec) const
-		{
-			for (auto rv : vec)
-				f(rv);
-		}
-		F& f;
-	};
-#endif
-public:
 	template<typename F>
 	void forEachRV(F&& f) const
 	{
-#ifndef GSE_CPP14
-		boost::fusion::for_each(rvs,RVIterator<F>{f});
-#else
 		boost::fusion::for_each(rvs,[&]<typename RVType>(const std::vector<RVType>& vec)
 		{
 			for (auto& rv : vec)
 				f(rv);
 		});
-#endif
 	}
 	template<typename RVType, typename F>
 	void forEachRV(F&& f) const
@@ -1416,32 +805,14 @@ public:
 		for (auto rv : rvList)
 			f(rv);
 	}
-private:
-#ifndef GSE_CPP14
-	template<typename F>
-	struct ConstraintIterator
-	{
-		template<typename CType> void operator()(const std::vector<CType>& constraints) const
-		{
-			for (auto c : constraints)
-				f(c);
-		}
-		F& f;
-	};
-#endif
-public:
 	template<typename F>
 	void forEachConstraint(F&& f) const
 	{
-#ifndef GSE_CPP14
-		boost::fusion::for_each(constraints,ConstraintIterator<F>{f});
-#else
 		boost::fusion::for_each(constraints,[&]<typename CType>(const std::vector<CType>& constraints)
 		{
 			for (auto& c : constraints)
 				f(c);
 		});
-#endif
 	}
 	template<typename CType, typename F>
 	void forEachConstraint(F&& f) const
@@ -1450,55 +821,7 @@ public:
 		for (auto c : constraintList)
 			f(c);
 	}
-private:
-
-
 	//-------------------------------------------------------------------------
-	//-------------------------------------------------------------------------
-	//-------------------------------------------------------------------------
-	//-------------------------------------------------------------------------
-#ifndef GSE_CPP14
-	struct RVWriter
-	{
-		template<typename RVType> void operator()(const std::vector<RVType>& vec) const
-		{
-			for (auto& rv : vec)
-			{
-				out << rv.getId() << "[label=\"" << typeid(RVType).name() << "_" << rv.getId() << "\"] ";
-				//out << rv.getId() << "[label=\"" << rv.getId() << "\"] ";
-			}
-		}
-		std::ofstream& out;
-	};
-	struct ConstraintEdgeWriter
-	{
-		template<typename T> void operator()(RandomVariable<T> paramRv) const
-		{
-			out << paramRv.getId() << " -- _" << cname << "_" << cid << "\n";
-		}
-		std::ofstream& out;
-		std::string cname;
-		int cid;
-	};
-	struct ConstraintWriter
-	{
-		template<typename CType> void operator()(const std::vector<CType>& constraints) const
-		{
-			int cid=0;
-			for (auto& c : constraints)
-			{
-				std::string cname=typeid(CType).name();
-				out << "node [shape=box]; _" << cname << "_" << cid << "[label=\"" << cname <<  "\"]\n";
-				//out << "node [shape=point]; _" << cname << "_" << cid << "[label=\"" << cname <<  "\"]\n";
-				boost::fusion::for_each(c.getParams(),ConstraintEdgeWriter{out,cname,cid});
-				out << "\n";
-				cid++;
-			}
-		}
-		std::ofstream& out;
-	};
-#endif
-public:
 	void writeDot(std::ofstream& out)
 	{
 		out << "graph FG {\n";
@@ -1518,9 +841,6 @@ public:
 //			B -- C2;
 //		}
 		out << "node [shape=ellipse] ";
-#ifndef GSE_CPP14
-		boost::fusion::for_each(rvs,RVWriter{out});
-#else
 		boost::fusion::for_each(rvs,[&]<typename RVType>(const std::vector<RVType>& vec)
 		{
 			for (auto& rv : vec)
@@ -1529,11 +849,7 @@ public:
 				//out << rv.getId() << "[label=\"" << rv.getId() << "\"] ";
 			}
 		});
-#endif
 		out << "\n\n";
-#ifndef GSE_CPP14
-		boost::fusion::for_each(constraints,ConstraintWriter{out});
-#else
 		boost::fusion::for_each(constraints,[&]<typename CType>(const std::vector<CType>& constraints)
 		{
 			int cid=0;
@@ -1550,7 +866,6 @@ public:
 				cid++;
 			}
 		});
-#endif
 		out << "}" << std::endl;
 	}
 

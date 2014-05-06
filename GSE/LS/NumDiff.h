@@ -82,7 +82,7 @@ public:
 	void operator()(const Matrix<T,InputsAtCompileTime,1>& in, Matrix<T,ValuesAtCompileTime,1>* v) const
 	{
 		typename CTraits::ParamVecType params=actualParams;
-		for_range<0,CTraits::NumParams>(ForEachParam(params,in));
+		boost::mpl::for_each<boost::mpl::range_c<int,0,CTraits::NumParams> >(ForEachParam(params,in));
 
 		typename CTraits::ParamJacType jac;
 
@@ -137,7 +137,7 @@ typename ConstraintTraits<Constraint>::ParamJacType computeJacobian(const Constr
 	typedef ConstraintTraits<Constraint> CTraits;
 
 	typename ConstraintTraits<Constraint>::ParamJacType actualJac;
-	for_range<0,CTraits::NumParams>(DissectJacobian<Constraint>(jac,actualJac));
+	boost::mpl::for_each<boost::mpl::range_c<int,0,CTraits::NumParams> >(DissectJacobian<Constraint>(jac,actualJac));
 	return actualJac;
 }
 
